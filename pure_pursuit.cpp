@@ -1,6 +1,12 @@
 #include<bits/stdc++.h>
+#include<vector>
 #include "matplotlibcpp.h"
 #include <cmath>
+
+#define PLOT (1)
+float Lfc = 2,k =0.1,L = 2.9, kv = 1;
+using namespace std;
+namespace plt = matplotlibcpp;
 struct state
 {
     float x;
@@ -32,18 +38,30 @@ struct state
      x_rear =  x - ((L / 2) * cos(  w));
      y_rear =  y - ((L / 2) * sin(  w));
     }
-}
+};
 
-float pure_pursuit(state veh,vector<float> cx,vector<float>cy,int pindx){
-    int curr_indx = calc_lookahead_pt(veh,cx,cy,pindx);
+float pure_pursuit(int curr_indx,int pindx,state veh,vector<float> cx,vector<float> cy){
+    int tx=0,ty=0;
+    if (pindx>=curr_indx)
+        curr_indx = pindx;
+    if (curr_indx < cx.size()){
+        tx = cx[curr_indx];
+        ty = cy[curr_indx];
+    }else{
+        return 0;
+    }
+    int alpha = atan2f(ty-veh.y_rear,tx-veh.x_rear);
+    float look_ahead_dist = k*veh.v + Lfc;
+    float delta = atan2f(2*L*sin(alpha)/look_ahead_dist,1);
+    return delta;
 
 }
-int calc_lookahead_pt(state veh,vector<float> cx,vector<float>cy,int pindx){
+int calc_lookahead_pt(state veh,vector<float> cx,vector<float> cy,int pindx){
     static int old_nearest_point = 0;
-    int indx = 0
+    int indx = 0;
     if(pindx ==0){
         float min_distance = FLT_MAX;
-        for(int i = 0;i<num.size();i++){
+        for(int i = 0;i<cx.size();i++){
             float distance = veh.distance(cx[i],cy[i]);
             if(min_distance > distance){
                 min_distance = distance;
@@ -63,20 +81,23 @@ int calc_lookahead_pt(state veh,vector<float> cx,vector<float>cy,int pindx){
         }
         old_nearest_point = indx;
     }
-    float k =1,temp =0;//gain on vel
-    float look_ahead_dist = k*veh.v + 10;
+    float temp =0;//gain on vel
+    float look_ahead_dist = k*veh.v + Lfc;
     while (look_ahead_dist > temp){
         temp = veh.distance_rear(cx[indx],cy[indx]);
         indx ++;
     }
-    return indx;
-    
+    return indx;  
+}
+
+int pid_vel(float target,float vel){
+    return kv*(target-vel);
 }
 int main(){
     // generate trajectory
-    vector<float> cx((0-50)/0.1,0);
+    vector<float> cx((50)/0.1,0.0);
     for(float i = 1; i< cx.size();i++){
-        cx[i] = c[i-1]+0.1;
+        cx[i] = cx[i-1]+0.1;
     }
     vector<float> cy (cx.size(),0);
     for(float i = 1; i< cy.size();i++){
@@ -85,14 +106,33 @@ int main(){
     state veh (0,3,0,0);
     vector<state> veh_state;
     veh_state.push_back(veh);
+    float target_speed = 10.0 / 3.6; // [m/s]
+
     int max_time = 100;
     float time = 0,delta = 0,a=1,dt =0.1;
-    while time < max_time{
-        delta = pure_pursuit(veh,cx,cy,indx);
+    int pindx = 0, curr_indx = calc_lookahead_pt(veh,cx,cy,pindx);
+
+    vector<float> x,y,w,v,t;
+    while (time < max_time && curr_indx<cx.size()){
+        pindx = curr_indx;
+        curr_indx = calc_lookahead_pt(veh,cx,cy,pindx);
+        delta = pure_pursuit(curr_indx,pindx,veh,cx,cy);
         a = pid_vel(target_speed, veh.v);
         veh.update(a,delta,dt);
+        cout<<veh.x-cx[curr_indx] << " " << veh.y-cy[curr_indx] << " " << time <<endl;
         time = time +dt;
         veh_state.push_back(veh);
+        #if PLOT
+            x.push_back(veh.x);
+            y.push_back(veh.y);
+        // Clear previous plot
+			plt::clf();
+			// Plot line from given x and y data. Color is selected automatically.
+			plt::plot(x,y,"-k");
+            plt::plot(cx,cy,"-r");
+            plt::pause(0.01);
+
+        #endif
     }
     return 0;
-}
+}//g++ pure_pursuit.cpp -I/usr/include/python2.7 -lpython2.7 -I/home/mustafahathiyari/libraries/matplotlib-cpp -std=c++11
