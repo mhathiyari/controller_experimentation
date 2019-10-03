@@ -14,8 +14,8 @@ inline double mod2pi(double theta){
 class purepursuit {
 
 int oldNeareastIndx = -1;
-state veh;
-float Lfc = 2,k =0.1,L = 2.9, kv = 1;
+int pindx = -1;
+float Lfc = 2,k =0.1,L = 2.9, kv = 1,dt =0.1;
 float target_speed = 10.0 / 3.6; // [m/s]
 
 vector<float> cy;
@@ -25,7 +25,8 @@ int calc_lookahead_pt(state veh,int pindx);
 float pid_vel(float target,float vel);
 
 public:
-purepursuit(vector<float> cx,vector<float> cy,state veh_);
+state veh;
+purepursuit(vector<float> cx,vector<float> cy,state& veh_);
 vector<pair<float,float>> pure_pursuit_control(int curr_indx,int pindx,state veh);
 }
 
