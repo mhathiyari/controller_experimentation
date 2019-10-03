@@ -117,7 +117,7 @@ def plot_arrow(x, y, yaw, length=1.0, width=0.5, fc="r", ec="k"):
     Plot arrow
     """
 
-    if not isinstance(x, float):
+    if not isinstance(x, double):
         for (ix, iy, iyaw) in zip(x, y, yaw):
             plot_arrow(ix, iy, iyaw)
     else:
