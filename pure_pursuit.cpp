@@ -30,11 +30,11 @@ struct state
         double dy = y_rear-yd;
         return sqrt(dx*dx+dy*dy);
     }
-    void update(double a,double delta,double dt){
+    void update(double a,double delta,double dt,double Ld){
      x =  x +  v * cos(w) * dt;
      y =  y +  v * sin(w) * dt;
      w =   w +  v / L * tan(delta) * dt;
-     //w = mod2pi(w);
+     /w = mod2pi(w);
      v =  v + a * dt;
      x_rear =  x - ((L / 2) * cos(  w));
      y_rear =  y - ((L / 2) * sin(  w));

@@ -1,4 +1,5 @@
 #include "purepursuit.hpp"
+#include<cppad/cppad.hpp>
 
 purepursuit::purepursuit(vector<double> cx_,vector<double> cy_,state veh_){
 cx = cx_ ;
@@ -15,7 +16,6 @@ vector<double> purepursuit::pure_pursuit_control()
     if (indx < cx.size()){
         tx = cx[indx];
         ty = cy[indx];
-        cout<< "ok"<<endl;
     }else{
         tx = cx.back();
         ty = cy.back();
@@ -25,7 +25,9 @@ vector<double> purepursuit::pure_pursuit_control()
     double alpha = atan2(ty-veh.y_rear,tx-veh.x_rear)-veh.w;
     alpha = mod2pi(alpha);
     double look_ahead_dist = k*veh.v + Lfc;
-    double delta = atan2f(2*L*sin(alpha)/look_ahead_dist,1.0);
+    cout<< Ld << endl;
+
+    double delta = atan2(2*Ld*sin(alpha)/look_ahead_dist,1.0);
     delta = mod2pi(delta);
     vector<double> result;
     double a = pid_vel();
@@ -52,6 +54,7 @@ int purepursuit::calc_lookahead_pt(){
             }
         }
         oldNeareastIndx = indx;
+        cout<< "target" << indx<< endl;
     }else
     {
         indx = oldNeareastIndx;
@@ -66,7 +69,7 @@ int purepursuit::calc_lookahead_pt(){
         oldNeareastIndx = indx;
     }   
 
-    double Ld = 0;
+    Ld = 0;
     double Lf = k*veh.v+Lfc;
 
     while(Lf>Ld && indx+1<cx.size())
@@ -74,6 +77,7 @@ int purepursuit::calc_lookahead_pt(){
         Ld = veh.distance_rear(cx[indx],cy[indx]);
         indx += 1;
     }
+    cout<< Ld << " ";
     return indx;
 
 }
@@ -102,7 +106,7 @@ int main(){
     double time = 0,delta = 0,a=1,dt =0.1;
     while (time < max_time){
         vector<double> result = control.pure_pursuit_control();
-        control.veh.update(result[0],result[1],dt);
+        control.veh.update(result[0],result[1],dt,control.Ld);
 
 
 

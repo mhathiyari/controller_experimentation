@@ -5,7 +5,7 @@
 
  
 using namespace std;
-using namespace Eigen;
+//using namespace Eigen;
 namespace plt = matplotlibcpp;
 
 inline double mod2pi(double theta){
@@ -36,8 +36,6 @@ struct state
      w =   w +  v / L * tan(delta) * dt;
      w = mod2pi(w);
      v =  v + a * dt;
-     x_rear =  x - ((L / 2) * cos(  w));
-     y_rear =  y - ((L / 2) * sin(  w));
     }
 };
 
@@ -45,21 +43,21 @@ class Stanley {
     private:
     int oldNeareastIndx = -1;
     int pindx = -1;
-    double Lfc = 2,k =0.01,L = 2.9, kv = 1,dt =0.1;
+    double Lfc = 2,k =1,L = 2.9, kv = 1,dt =0.1;
     double target_speed = 10.0 / 3.6; // [m/s]
-    int last_target_idx = -1;
 
     vector<double> cy;
     vector<double> cx;
-
-    int calc_lookahead_pt();
-
+    vector<double> cd;
     public:
 
     state veh;
-    Stanley(vector<double> cx,vector<double> cy,state veh_);
+    Stanley(vector<double> cx_,vector<double> cy_,vector<double> cd_,state veh_);
     double stanley_control();
     double pid_vel();
+    int calc_lookahead_pt();
+    int last_target_idx = -1;
+
 };
 
 

@@ -38,14 +38,14 @@ struct state
         double dy = y_rear-yd;
         return sqrt(pow(dx,2)+pow(dy,2));
     }
-    void update(double a,double delta,double dt){
+    void update(double a,double delta,double dt,double Ld){
      x =  x +  v * cos(w) * dt;
      y =  y +  v * sin(w) * dt;
-     w =   w +  v / L * tan(delta) * dt;
+     w =   w +  v / Ld * tan(delta) * dt;
      w = mod2pi(w);
      v =  v + a * dt;
-     x_rear =  x - ((L / 2) * cos(  w));
-     y_rear =  y - ((L / 2) * sin(  w));
+     x_rear =  x - ((Ld / 2) * cos(  w));
+     y_rear =  y - ((Ld / 2) * sin(  w));
     }
 };
 
@@ -53,7 +53,7 @@ class purepursuit {
     private:
     int oldNeareastIndx = -1;
     int pindx = -1;
-    double Lfc = 2,k =0.01,L = 2.9, kv = 1,dt =0.1;
+    double Lfc = 2,k =0.1, kv = 1,dt =0.1;
     double target_speed = 10.0 / 3.6; // [m/s]
 
     vector<double> cy;
@@ -63,6 +63,7 @@ class purepursuit {
     double pid_vel();
 
 public:
+double Ld = 0;
     state veh;
     purepursuit(vector<double> cx,vector<double> cy,state veh_);
     vector<double> pure_pursuit_control();
