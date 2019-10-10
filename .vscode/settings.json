@@ -3,6 +3,8 @@
         "iostream": "cpp",
         "vector": "cpp",
         "cmath": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "dense": "cpp",
+        "eigenvalues": "cpp"
     }
 }

@@ -1,4 +1,6 @@
-#include<eigen3/Eigen>
+#include<eigen3/Eigen/Dense>
+#include<eigen3/Eigen/Eigenvalues>
+
 #include<vector>
 
 using namespace Eigen;
@@ -7,19 +9,19 @@ MatrixXd solve_DARE(MatrixXd& A,MatrixXd& B,MatrixXd& Q,MatrixXd& R){
     MatrixXd P = Q;
     int maxiter = 150;
     float eps = 0.01;
-    At = A.transpose();
-    Bt = B.transpose();
+    MatrixXd At = A.transpose();
+    MatrixXd Bt = B.transpose();
     for (int i=0;i<maxiter;i++)
     {
-        P_new = At*P*A - (At*P*B)*(R+Bt*P*B).inverse()*Bt*P*A+Q;
-        if(abs(P_new-P).maxCoeff()< eps)
+        MatrixXd P_new = At*P*A - (At*P*B)*(R+Bt*P*B).inverse()*(Bt*P*A)+Q;
+        if(((P_new-P).cwiseAbs()).maxCoeff()< eps)
             break;
         P=P_new;
     }
     return P;
     }
 
- double   dlqr(MatrixXd& A,MatrixXd& B,MatrixXd& Q,MatrixXd& R,MatrixXd& P,MatrixXd& eigvalues)
+ MatrixXd   dlqr(MatrixXd& A,MatrixXd& B,MatrixXd& Q,MatrixXd& R,MatrixXd& P,MatrixXf& eigvalues)
     {
     /*Solve the discrete time lqr controller.
     x[k+1] = A x[k] + B u[k]
@@ -29,16 +31,18 @@ MatrixXd solve_DARE(MatrixXd& A,MatrixXd& B,MatrixXd& Q,MatrixXd& R){
 
     // first, try to solve the ricatti equation
     P = solve_DARE(A, B, Q, R);
-    Bt = B.transpose();
+    MatrixXd Bt = B.transpose();
     // compute the LQR gain
-    K = (Bt*P*B + R).inverse() * (Bt*P*A);
-    EigenSolver<MatrixXf> es;
-    eigvalues = es.compute(A - (B * K),false);
+    MatrixXd K = (Bt*P*B + R).inverse() * (Bt*P*A);
+    //need to figure out why Eigen is throwing exception
+    // EigenSolver<MatrixXf> es;
+    // es.compute(A - (B * K),false);
+    // eigvalues = es.eigenvalues();
 
-    return K
+    return K;
     }
- double   dlqr(MatrixXd& A,MatrixXd& B,MatrixXd& Q,MatrixXd& R){
+ MatrixXd  dlqr(MatrixXd& A,MatrixXd& B,MatrixXd& Q,MatrixXd& R){
      MatrixXd P;
-     MatrixXd eigvalues;
+     MatrixXf eigvalues;
      return dlqr(A,B,Q,R,P,eigvalues);
  }

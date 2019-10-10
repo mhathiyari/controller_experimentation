@@ -83,6 +83,10 @@ int main(){
     int max_time = 100;
     double time = 0,delta = 0,a=1,dt =0.1;
     control.last_target_idx = control.calc_lookahead_pt();
+    plt::plot(x,y,"-k");
+    plt::pause(10);
+    plt::plot(cx,cy);
+    plt::pause(3);
     while (time < max_time){
         double delta = control.stanley_control();
         double a = control.pid_vel();
@@ -97,8 +101,10 @@ int main(){
         // Clear previous plot
 			plt::clf();
 			// Plot line from given x and y data. Color is selected automatically.
-			plt::plot(x,y,"-k");
-            plt::plot(cx,cy,"-r");
+			plt::named_plot("Car",x,y,"-k");
+            plt::named_plot("Track",cx,cy,"-r");
+            plt::legend();
+            plt::xlim(-1,60);
             // plt::plot(cx,cd,"-b");
             plt::pause(0.01);
 

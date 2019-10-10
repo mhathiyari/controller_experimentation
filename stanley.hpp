@@ -1,5 +1,6 @@
 #include<bits/stdc++.h>
 #include "matplotlibcpp.h"
+#include "d_are.hpp"
 #include <cmath>
 #define PLOT (1)
 
@@ -43,7 +44,7 @@ class Stanley {
     private:
     int oldNeareastIndx = -1;
     int pindx = -1;
-    double Lfc = 2,k =1,L = 2.9, kv = 1,dt =0.1;
+    double Lfc = 2,k =0.8,L = 2.9, kv = 1,dt =0.1;
     double target_speed = 10.0 / 3.6; // [m/s]
 
     vector<double> cy;
