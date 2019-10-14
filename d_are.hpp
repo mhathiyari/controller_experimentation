@@ -1,5 +1,6 @@
 #include<eigen3/Eigen/Dense>
 #include<eigen3/Eigen/Eigenvalues>
+#include<iostream>
 
 #include<vector>
 
@@ -11,13 +12,16 @@ MatrixXd solve_DARE(MatrixXd& A,MatrixXd& B,MatrixXd& Q,MatrixXd& R){
     float eps = 0.01;
     MatrixXd At = A.transpose();
     MatrixXd Bt = B.transpose();
+    MatrixXd P_new;
     for (int i=0;i<maxiter;i++)
     {
-        MatrixXd P_new = At*P*A - (At*P*B)*(R+Bt*P*B).inverse()*(Bt*P*A)+Q;
+        P_new = At*P*A - (At*P*B)*(R+Bt*P*B).inverse()*(Bt*P*A)+Q;
         if(((P_new-P).cwiseAbs()).maxCoeff()< eps)
             break;
         P=P_new;
     }
+    if(P == P_new)
+        std::cout<<"Error in DARE"<<std::endl;
     return P;
     }
 

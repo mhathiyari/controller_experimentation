@@ -7,22 +7,18 @@ veh = veh_ ;
 cd = cd_;
 cdd = cdd_;
 int indx = calc_lookahead_pt();
-float fx = veh.x+cos(veh.w)*L;
-float fy = veh.y+sin(veh.w)*L;
-float dx = fx - cx[indx];
-float dy = fy - cy[indx];
+float dx = veh.x - cx[indx];
+float dy = veh.y - cy[indx];
 pe = sqrt(pow(dx,2)+pow(dy,2));
 pth_e =  mod2pi(veh.w - cd[indx]);
 
 }
 int LQRSteer::calc_lookahead_pt(){
-    float fx = veh.x+cos(veh.w)*L;
-    float fy = veh.y+sin(veh.w)*L;
     int min_dis = INT_MAX;
     int indx = 0;
     for(int i=0;i<cx.size();i++){
-        float dx = fx - cx[i];
-        float dy = fy - cy[i];
+        float dx = veh.x - cx[i];
+        float dy = veh.y - cy[i];
         float tempdist = sqrt(pow(dx,2)+pow(dy,2));
         if(min_dis>tempdist){
             min_dis = tempdist;
@@ -73,10 +69,8 @@ vector<double> LQRSteer::lqr_control(vector<double> sp,MatrixXd Q,MatrixXd R){
     //th_e: angle difference to the path
     //dot_th_e: derivative of th_e
     //delta_v: difference between current speed and target speed
-    float fx = veh.x+cos(veh.w)*L;
-    float fy = veh.y+sin(veh.w)*L;
-    float dx = fx - cx[indx];
-    float dy = fy - cy[indx];
+    float dx = veh.x - cx[indx];
+    float dy = veh.y - cy[indx];
     e = sqrt(pow(dx,2)+pow(dy,2));
     MatrixXd x = MatrixXd::Zero(5, 1);
     x(0, 0) =e;
@@ -90,11 +84,12 @@ vector<double> LQRSteer::lqr_control(vector<double> sp,MatrixXd Q,MatrixXd R){
     //delta: steering angle
     //accel: acceleration
     MatrixXd ustar = -K * x;
+    cout<< ustar.size();
     //calc steering input
     double ff = atan2(L * k, 1);  //feedforward steering angle
     double fb = mod2pi(ustar(0, 0));  //feedback steering angle
     double delta = ff + fb;
-
+    // delta = mod2pi(delta);
     //calc accel input
     double accel = ustar(1, 0);
     vector<double> res;
@@ -113,19 +108,18 @@ int main (){
         cx[i] = cx[i-1]+0.1;
     }
     vector<double> cy (cx.size(),0);
-    for(double i = 1; i< cy.size();i++){
+    for(double i = 0; i< cy.size();i++){
         cy[i] = sin(cx[i]/5.0)*cx[i]/2.0;//sin(ix / 5.0) * ix / 2.0 for ix in cx]
     }
         vector<double> cd (cx.size(),0);
-    for(double i = 1; i< cy.size();i++){
+    for(double i = 0; i< cy.size();i++){
         double temp = cos(cx[i]/5.0)*cx[i]/10+sin(cx[i]/5.0)/2;
 
         cd[i] = atan2(temp,1);//sin(ix / 5.0) * ix / 2.0 for ix in cx]
     }
     vector<double> cdd (cx.size(),0);
-    for(double i = 1; i< cy.size();i++){
+    for(double i = 0; i< cy.size();i++){
         double temp = 0.2*cos(cx[i]/5.0)+sin(cx[i]/5.0)*0.02;
-
         cdd[i] = temp;//sin(ix / 5.0) * ix / 2.0 for ix in cx]
     }
 
@@ -145,10 +139,10 @@ int main (){
     int max_time = 100;
     double time = 0,delta = 0,a=1,dt =0.1;
     control.last_target_idx = control.calc_lookahead_pt();
-    plt::plot(x,y,"-k");
-    plt::pause(10);
-    plt::plot(cx,cy);
-    plt::pause(3);
+    // plt::plot(x,y,"-k");
+    // plt::pause(10);
+    // plt::plot(cx,cy);
+    // plt::pause(3);
     while (time < max_time){
         vector<double> res = control.lqr_control(sp,Q,R);
         // double a = control.pid_vel();
