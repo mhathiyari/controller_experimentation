@@ -5,6 +5,7 @@
         "cmath": "cpp",
         "ostream": "cpp",
         "dense": "cpp",
-        "eigenvalues": "cpp"
+        "eigenvalues": "cpp",
+        "complex": "cpp"
     }
 }

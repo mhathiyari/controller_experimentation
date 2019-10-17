@@ -1,8 +1,9 @@
-#include<bits/stdc++.h>
+#include <bits/stdc++.h>
 #include "matplotlibcpp.h"
 #include "d_are.hpp"
 #pragma once
 #include <cmath>
+#include <string>
 #define PLOT (1)
 
  
@@ -14,6 +15,10 @@ inline double mod2pi(double theta){
     return theta - 2*M_PI*floor(theta/2/M_PI); 
 }
 
+inline double pi2pi(double theta){
+    return fmod(theta + M_PI, 2 * M_PI) - M_PI; 
+}
+
 
 struct state
 {
@@ -21,8 +26,8 @@ struct state
     double y;
     double w;
     double v;
-    double L = 2.9;
-    state(){x =0;y=0;w = 0;v=0;}
+    double L = 0.5;
+    state(){x = 0;y = 0;w = 0;v = 0;}
     state(double x_,double y_, double w_,double v_){
         x = x_; y = y_; w = w_; v = v_;
     }
@@ -43,11 +48,11 @@ struct state
 
 class LQRSteer {
     private:
-    int oldNeareastIndx = -1;
+    
     int pindx = -1;
-    double Lfc = 2,k =0.8,L = 2.9, kv = 1,dt =0.1;
+    double Lfc = 2/*, k =0.8*/,L = 0.5, kv = 1,dt = 0.1;
     double target_speed = 10.0 / 3.6; // [m/s]
-    double e,pe,th_e,pth_e;
+    double e, pe, th_e, pth_e;
 
     vector<double> cy;
     vector<double> cx;
