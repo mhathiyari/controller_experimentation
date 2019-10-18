@@ -7,10 +7,15 @@ veh = veh_ ;
 cd = cd_;
 cdd = cdd_;
 int indx = calc_lookahead_pt();
+bool isRight = (indx < 0)? true : false; 
+indx = abs(indx); 
 double dx = veh.x - cx[indx];
 double dy = veh.y - cy[indx];
 pe = sqrt(pow(dx,2)+pow(dy,2));
-pth_e =  mod2pi(veh.w - cd[indx]);
+pe = (isRight)? -pe : pe; 
+pth_e =  pi2pi(veh.w - cd[indx]);
+
+pe = 0; pth_e = 0; 
 
 }
 int LQRSteer::calc_lookahead_pt(){
@@ -26,14 +31,15 @@ int LQRSteer::calc_lookahead_pt(){
         }
     }
     double angle = pi2pi(cd[indx] - atan2(cy[indx] - veh.y, cx[indx] - veh.x));
-    if(angle < 0) indx = -indx;
+    // if(angle < 0) indx = -indx;
+    isRight = (angle < 0)? true : false; 
     return indx;
 }
 
 vector<double> LQRSteer::lqr_control(vector<double> sp,MatrixXd Q,MatrixXd R){
     int indx = calc_lookahead_pt();
-    bool isRight = (indx > 0)? false : true; 
-    indx = abs(indx);
+    // bool isRight = (indx >= 0)? false : true; 
+    // indx = abs(indx);
     last_target_idx = indx; 
     double tv = target_speed;//can be replaced by a speed profile
 
@@ -76,6 +82,7 @@ vector<double> LQRSteer::lqr_control(vector<double> sp,MatrixXd Q,MatrixXd R){
     double dy = veh.y - cy[indx];
     e = sqrt(pow(dx,2)+pow(dy,2));
     e = (isRight)? -e : e;
+    cout << "e: " << e << ", th_e: " << th_e * 180 / M_PI << ", indx: " << indx << endl;
     MatrixXd x = MatrixXd::Zero(5, 1);
     x(0, 0) = e;
     x(1, 0) = (e - pe) / dt;
@@ -109,21 +116,21 @@ void plotPoint(double x, double y, string pointType);
 int main (){
     // generate trajectory
     vector<double> cx((50)/0.1,0.0);
-    for(double i = 1; i< cx.size();i++){
+    for(double i = 1; i < cx.size();i++){
         cx[i] = cx[i-1]+0.1;
     }
     vector<double> cy (cx.size(),0);
-    for(double i = 0; i< cy.size();i++){
+    for(double i = 0; i < cy.size();i++){
         cy[i] = sin(cx[i]/5.0)*cx[i]/2.0;//sin(ix / 5.0) * ix / 2.0 for ix in cx]
     }
     vector<double> cd (cx.size(),0);
-    for(double i = 0; i< cy.size();i++){
+    for(double i = 0; i < cy.size();i++){
         double temp = cos(cx[i]/5.0)*cx[i]/10+sin(cx[i]/5.0)/2;
 
         cd[i] = atan2(temp,1);//sin(ix / 5.0) * ix / 2.0 for ix in cx]
     }
     vector<double> cdd(cx.size(), 0);
-    for(double i = 0; i< cy.size();i++){
+    for(double i = 0; i < cy.size();i++){
         double x = cx[i], yd, ydd, temp; 
         yd  = cos(cx[i]/5.0)*cx[i]/10+sin(cx[i]/5.0)/2.0;
         ydd = -sin(x/5.0)*x/50.0 + cos(x/5.0)/5.0;
@@ -131,10 +138,14 @@ int main (){
         cdd[i] = temp;//sin(ix / 5.0) * ix / 2.0 for ix in cx]
     }
     //initalize state
-    state veh_ (0,5,0,0);
+    double _x, _y; 
+    cout << "enter x: " << endl;
+    cin >> _x;
+    cout << "enter y: " << endl;
+    cin >> _y; 
+    state veh_ (_x,_y,0,0);
     // set speed
     LQRSteer control(cx,cy,cd,cdd,veh_);
-
     vector<state> veh_state;
     veh_state.push_back(veh_);
     vector<double> x,y,w,v,t;
@@ -145,17 +156,18 @@ int main (){
     vector<double> sp (5,0);
     int max_time = 100;
     double time = 0, delta = 0, a = 1,dt = 0.1;
-    control.last_target_idx = control.calc_lookahead_pt();
+    // control.last_target_idx = control.calc_lookahead_pt();
     // plt::plot(x,y,"-k");
     // plt::pause(10);
     // plt::plot(cx,cy);
     // plt::pause(3);
 
     while (time < max_time && control.last_target_idx < cx.size()){
+        cout << "ANDERSONNNNNNNNN" << endl;
         vector<double> res = control.lqr_control(sp,Q,R);        
         // double a = control.pid_vel();
         control.veh.update(res[1],res[0],dt);
-        time = time +dt;
+        time = time + dt;
         veh_state.push_back(control.veh);
         if(control.last_target_idx == cx.size()-1)
             break;

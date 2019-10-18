@@ -21,7 +21,7 @@ MatrixXd solve_DARE(MatrixXd& A,MatrixXd& B,MatrixXd& Q,MatrixXd& R){
         P=P_new;
     }
     if(P == P_new){
-        std::cout << "Error in DARE  " << ((P_new-P).cwiseAbs()).maxCoeff();
+        // std::cout << "Error in DARE  " << ((P_new-P).cwiseAbs()).maxCoeff();
     }
     // std::cout << "  iteration: " << ((P_new-P).cwiseAbs()).maxCoeff() << std::endl;
     return P_new;
