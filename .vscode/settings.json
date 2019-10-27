@@ -5,6 +5,12 @@
         "cmath": "cpp",
         "ostream": "cpp",
         "dense": "cpp",
-        "eigenvalues": "cpp"
+        "eigenvalues": "cpp",
+        "complex": "cpp",
+        "initializer_list": "cpp",
+        "array": "cpp",
+        "bitset": "cpp",
+        "utility": "cpp",
+        "valarray": "cpp"
     }
 }
