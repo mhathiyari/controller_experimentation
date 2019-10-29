@@ -2,6 +2,7 @@
 
 using CppAD::AD;
 
+
 int N = 7;
 int target_speed = 15; //m/s
 const double Lf = 2.67;
@@ -11,27 +12,27 @@ size_t w_start = y_start+N;
 size_t v_start = w_start+N;
 size_t cte_start = v_start+N;
 size_t we_start = cte_start+N;
-size_t delta_start = we_start+N-1;
+size_t delta_start = we_start+N;
 size_t a_start = delta_start+N-1;
 double dt = 0.1;
 
 class FG_eval{
     public:
     Eigen::VectorXd coeff;
-    FG_eval(Eigen::VectorXd coeff){this->coeff = coeff;}
+    FG_eval(Eigen::VectorXd coeff){this->coeff = coeff;};
 
     typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
-    void operator()(ADvector& fg, ADvector& var){
+    void operator()(ADvector& fg, const ADvector& var){
 
+        // fg[0] = 0;
         for(int t = 0;t<N;t++){
 
-            fg[0] = 0;
             //cost for cte
-            fg[0] += 20*CppAD::pow(var[cte_start+t],2);
+            fg[0] += 2000*CppAD::pow(var[cte_start+t],2);
             // cost for orientation errror
-            fg[0] += 100*CppAD::pow(var[we_start+t],2);
+            fg[0] += 1000*CppAD::pow(var[we_start+t],2);
             //cost of target speed
-            fg[0] += 2*CppAD::pow(var[v_start+t]-target_speed,2);
+            fg[0] += 2*CppAD::pow((var[v_start+t]-target_speed),2);
             
             // TODO add actuator cost
 
@@ -65,21 +66,25 @@ class FG_eval{
             AD<double> v1 = var[v_start+t];
             AD<double> cte1 = var[cte_start+t];
             AD<double> we1 = var[we_start+t];
-            AD<double> delta1 = var[delta_start+t];
-            AD<double> a1 = var[a_start+t];
+            // AD<double> delta1 = var[delta_start+t];
+            // AD<double> a1 = var[a_start+t];
 
             //calc ref point
-            AD<double> f0 = coeff[0] + coeff[1]*x0 + coeff[2]*pow(x0,2) + coeff[3]*pow(x0,3);
+            AD<double> f0 = coeff[0] + coeff[1]*x0 + coeff[2]*CppAD::pow(x0,2) + coeff[3]*CppAD::pow(x0,3);
             //cacl ref point angle
-            AD<double> w_ref = CppAD::atan(coeff[1] + 2*coeff[2]*x0 + 3*coeff[3]*pow(x0,2));
+            AD<double> w_ref = CppAD::atan(coeff[1] + 2*coeff[2]*x0 + 3*coeff[3]*CppAD::pow(x0,2));
             // now we say that the next state - integrated current state should be 0
             fg[1+x_start+t] = x1 - (x0 +v0*CppAD::cos(w0)*dt);
             fg[1+y_start+t] = y1 - (y0 +v0*CppAD::sin(w0)*dt);
             fg[1+w_start+t] = w1 - (w0 +v0*delta0/Lf*dt);
             fg[1+v_start+t] = v1 - (v0 + a0*dt);
             fg[1+cte_start+t] = cte1 - ((f0-y0)+(v0*CppAD::sin(we0)*dt));
-            fg[1+we_start+t] = a1 - (w0-w_ref+v0*delta0/Lf*dt);
+            fg[1+we_start+t] = w1 - ((w0-w_ref)+v0*delta0/Lf*dt);
         }
+        // for(int i =0; i<fg.size();i++){
+        //     std::cout<<fg[i]<<std::endl;
+        // }
+        //std::cout<<"inside FG_val";
 
     }
 
@@ -96,7 +101,7 @@ vector<double> MPC::mpc_solve(Eigen::VectorXd state,Eigen::VectorXd coeff){
     for(int i = 0;i<n_var;i++){
         var[i] = 0;
     }
-
+    
     //copying states into CPPAD vector
     var[x_start] = state[0];
     var[y_start] = state[1];
@@ -104,7 +109,6 @@ vector<double> MPC::mpc_solve(Eigen::VectorXd state,Eigen::VectorXd coeff){
     var[v_start] = state[3];
     var[cte_start] = state[4];
     var[we_start] = state[5];
-
     //upper and lower limits for var(states)
     Dvector var_lowerbounds(n_var);
     Dvector var_upperbounds(n_var);
@@ -124,21 +128,10 @@ vector<double> MPC::mpc_solve(Eigen::VectorXd state,Eigen::VectorXd coeff){
         var_upperbounds[i] = 1;
     }
 
-    var_lowerbounds[x_start] = state[0];
-    var_lowerbounds[y_start] = state[1];
-    var_lowerbounds[w_start] = state[2];
-    var_lowerbounds[v_start] = state[3];
-    var_lowerbounds[cte_start] = state[4];
-    var_lowerbounds[we_start] = state[5];
+          
 
-    var_upperbounds[x_start] = state[0];
-    var_upperbounds[y_start] = state[1];
-    var_upperbounds[w_start] = state[2];
-    var_upperbounds[v_start] = state[3];
-    var_upperbounds[cte_start] = state[4];
-    var_upperbounds[we_start] = state[5];
-
-    Dvector constraints_lb(n_contriants), constraints_up(n_contriants);
+    Dvector constraints_lb(n_contriants); 
+    Dvector constraints_up(n_contriants);
     for(int i=0;i<n_contriants;i++){
         constraints_up[i]=0;
         constraints_lb[i]=0;
@@ -159,50 +152,49 @@ vector<double> MPC::mpc_solve(Eigen::VectorXd state,Eigen::VectorXd coeff){
     constraints_up[we_start] = state[5];
 
     FG_eval fg_eval(coeff);
+// options for IPOPT solver
+  std::string options;
+  // Uncomment this if you'd like more print information
+  options += "Integer print_level  0\n";
+  // NOTE: Setting sparse to true allows the solver to take advantage
+  // of sparse routines, this makes the computation MUCH FASTER. If you
+  // can uncomment 1 of these and see if it makes a difference or not but
+  // if you uncomment both the computation time should go up in orders of
+  // magnitude.
+  options += "Sparse  true        forward\n";
+  options += "Sparse  true        reverse\n";
+  // NOTE: Currently the solver has a maximum time limit of 0.5 seconds.
+  // Change this as you see fit.
+  options += "Numeric max_cpu_time          0.5\n";
 
-    std::string options;
+    // std::string options;
 
-    options += "Sparse true             forward\n";
-    options += "Sparse true             reverse\n";
-    options += "Numeric max_cpu_time    0.5\n";
+    // options += "Sparse true             forward\n";
+    // options += "Sparse true             reverse\n";
+    // options += "Numeric max_cpu_time    0.5\n";
 
     CppAD::ipopt::solve_result<Dvector> result;
-
+    // std::cout<<"calling ipopt";
     //********* calling the ipopt solver **********//
     CppAD::ipopt::solve(options,var,var_lowerbounds,var_upperbounds,constraints_lb,constraints_up,fg_eval,result);
 
-    // Parsing the result
-    std::cout << "Solution Status :" << result.status <<"/n";
-    std::cout << "cost :" << result.obj_value << "/n";
+    // // Parsing the result
+    // std::cout << "Solution Status :" << result.status <<"/n";
+    // std::cout << "cost :" << result.obj_value << "/n";
     // return control at the 1st timestamp
+
+  bool ok = true;
+  ok &= result.status == CppAD::ipopt::solve_result<Dvector>::success;
+  std::cout<<"status" << ok << std::endl;
     std::vector<double> control;
     control.push_back(result.x[delta_start]);
     control.push_back(result.x[a_start]);
+    std::cout<<"delta " << control[0] << std::endl;
+    std::cout<<"a" << control[1] << std::endl;
     return control;
 
 }
 
-
-
-Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals, int order) {
-  assert(xvals.size() == yvals.size());
-  assert(order >= 1 && order <= xvals.size() - 1);
-  Eigen::MatrixXd A(xvals.size(), order + 1);
-
-  for (int i = 0; i < xvals.size(); i++) {
-    A(i, 0) = 1.0;
-  }
-
-  for (int j = 0; j < xvals.size(); j++) {
-    for (int i = 0; i < order; i++) {
-      A(j, i + 1) = A(j, i) * xvals(j);
-    }
-  }
-
-  auto Q = A.householderQr();
-  auto result = Q.solve(yvals);
-  return result;
-}
 
 int calc_lookahead_pt(std::vector<double> cx,std::vector<double> cy,state veh){
     double min_dis = std::numeric_limits<double>::max();
@@ -223,13 +215,13 @@ int calc_lookahead_pt(std::vector<double> cx,std::vector<double> cy,state veh){
 }
 
 void get_14points(int indx,Eigen::VectorXd &x_14pts,Eigen::VectorXd &y_14pts,std::vector<double>cx,std::vector<double>cy){
-    for(int i=0;i<14;i++){
+    for(int i=0;i<7;i++){
         x_14pts[i] = cx[i+indx];
         y_14pts[i] = cy[i+indx];
     }
 }
 
-transform_to_local(state veh_,Eigen::VectorXd &x_14pts,Eigen::VectorXd &y_14pts){
+void transform_to_local(state veh_,Eigen::VectorXd &x_14pts,Eigen::VectorXd &y_14pts){
     Eigen::VectorXd pnt(2);
     Eigen::VectorXd local_pnt(2);
 
@@ -257,44 +249,57 @@ int main (){
         cy[i] = sin(cx[i]/5.0)*cx[i]/2.0;//sin(ix / 5.0) * ix / 2.0 for ix in cx]
     }
 
-    }
     //initalize state
-    double _x, _y; 
-    std::cout << "enter x: " << endl;
-    std::cin >> _x;
-    std::cout << "enter y: " << endl;
-    std::cin >> _y; 
-    state veh_ (_x,_y,0,0);
+    // double _x, _y; 
+    // std::cout << "enter x: " << endl;
+    // std::cin >> _x;
+    // std::cout << "enter y: " << endl;
+    // std::cin >> _y; 
+    state veh_ (0,0,0,0);
     // set speed
     std::vector<state> veh_state;
     veh_state.push_back(veh_);
     std::vector<double> x,y,w,v,t;
 
     int max_time = 100;
-    double time = 0, delta = 0, a = 1,dt = 0.1;
+    double time = 0, delta = 0, a =1;
+    //std::cout << "before while ";
 
     MPC controller;
-    Eigen::VectorXd x_14pts(14,0);
-    Eigen::VectorXd y_14pts(14,0);
-
-    while (time < max_time && control.last_target_idx < cx.size()-14){
+    Eigen::VectorXd x_14pts(7);
+    Eigen::VectorXd y_14pts(7);
+    int last_target_idx = 0;
+    while (time < max_time ){
         int clst_indx = calc_lookahead_pt(cx, cy,veh_); // find the closest point
         get_14points(clst_indx,x_14pts,y_14pts,cx,cy); //find the closest 14 points
         transform_to_local(veh_,x_14pts,y_14pts);
+        //std::cout<<"14 points";
 
-        Eigen::VectorXd coeff = polyfit(x_14pts,y_14pts);
+        // for(int i=0;i<x_14pts.size();i++){
+        //     std::cout<<x_14pts[i]<<std::endl;
+        //     std::cout<<y_14pts[i]<<std::endl;
+
+        // }
+        Eigen::VectorXd coeff = polyfit(x_14pts,y_14pts,3);
+        // std::cout<<"start coeff";
+        // for(int i=0;i<coeff.size();i++){
+        //     std::cout<<coeff[i]<<std::endl;
+        // }
+        // std::cout<<"start coeff";
 
         double cte = coeff[0];
         double we = -atan(coeff[1]);
+        std::cout<<we;
         Eigen::VectorXd vehstate(6);
-        vehstate << 0, 0, 0, v, cte, epsi;
+        vehstate << 0, 0, 0, veh_.v, cte, we;
 
         auto res = controller.mpc_solve(vehstate,coeff);
-
+        std::cout<<res[0]<<" " << res[1] << std::endl;
         veh_.update(res[1],res[0],dt);
         time = time + dt;
         veh_state.push_back(veh_);
-        if(control.last_target_idx == cx.size()-14)
+        last_target_idx++;
+        if(last_target_idx == cx.size()-14)
             break;
         #if PLOT
             x.push_back(veh_state.back().x);
@@ -314,5 +319,5 @@ int main (){
     plt::show(); 
     return 0;
 }
-}
-//g++ mpc_steering.cpp -I/usr/include/python2.7 -lpython2.7 -I/home/mustafahathiyari/libraries/matplotlib-cpp -std=c++11
+
+//g++ mpc_steering.cpp -I/usr/include/python2.7 -lpython2.7 -lipopt -std=c++11
