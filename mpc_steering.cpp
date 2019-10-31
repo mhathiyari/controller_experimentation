@@ -30,13 +30,30 @@ class FG_eval{
             //cost for cte
             fg[0] += 2000*CppAD::pow(var[cte_start+t],2);
             // cost for orientation errror
-            fg[0] += 1000*CppAD::pow(var[we_start+t],2);
+            fg[0] += 10000*CppAD::pow(var[we_start+t],2);
             //cost of target speed
             fg[0] += 2*CppAD::pow((var[v_start+t]-target_speed),2);
             
             // TODO add actuator cost
 
             //TODO  add shock cost
+            // dilute actuators
+            // if (t < N - 1) {
+            //     // steering
+            //     fg[0] += CppAD::pow(var[delta_start + t], 2);
+            //     // throttle/brake
+            //     fg[0] += CppAD::pow(var[a_start + t], 2);
+            // }
+            
+            // // actuator shock absorber
+            // if (t < N - 2) {
+            //     //steering
+            //     fg[0] += 30000.0*CppAD::pow(var[delta_start + t + 1] - var[delta_start + t], 2);
+            //     //fg[0] += CppAD::pow(var[delta_start + t + 1] - var[delta_start + t], 2);
+
+            //     //acceleration
+            //     fg[0] += CppAD::pow(var[a_start + t + 1] - var[a_start + t], 2);    
+            // }
 
         }
         //contriant for the instial state
@@ -70,16 +87,16 @@ class FG_eval{
             // AD<double> a1 = var[a_start+t];
 
             //calc ref point
-            AD<double> f0 = coeff[0] + coeff[1]*x0 + coeff[2]*CppAD::pow(x0,2) + coeff[3]*CppAD::pow(x0,3);
+            AD<double> f0 = coeff[0] + coeff[1]*x0 + coeff[2]*pow(x0,2) + coeff[3]*pow(x0,3);
             //cacl ref point angle
-            AD<double> w_ref = CppAD::atan(coeff[1] + 2*coeff[2]*x0 + 3*coeff[3]*CppAD::pow(x0,2));
+            AD<double> w_ref = CppAD::atan(coeff[1] + 2*coeff[2]*x0 + 3*coeff[3]*pow(x0,2));
             // now we say that the next state - integrated current state should be 0
             fg[1+x_start+t] = x1 - (x0 +v0*CppAD::cos(w0)*dt);
             fg[1+y_start+t] = y1 - (y0 +v0*CppAD::sin(w0)*dt);
             fg[1+w_start+t] = w1 - (w0 +v0*delta0/Lf*dt);
             fg[1+v_start+t] = v1 - (v0 + a0*dt);
             fg[1+cte_start+t] = cte1 - ((f0-y0)+(v0*CppAD::sin(we0)*dt));
-            fg[1+we_start+t] = w1 - ((w0-w_ref)+v0*delta0/Lf*dt);
+            fg[1+we_start+t] = we1 - ((w0-w_ref)+v0*delta0/Lf*dt);
         }
         // for(int i =0; i<fg.size();i++){
         //     std::cout<<fg[i]<<std::endl;
@@ -155,7 +172,7 @@ vector<double> MPC::mpc_solve(Eigen::VectorXd state,Eigen::VectorXd coeff){
 // options for IPOPT solver
   std::string options;
   // Uncomment this if you'd like more print information
-  options += "Integer print_level  0\n";
+  //options += "Integer print_level  0\n";
   // NOTE: Setting sparse to true allows the solver to take advantage
   // of sparse routines, this makes the computation MUCH FASTER. If you
   // can uncomment 1 of these and see if it makes a difference or not but
@@ -165,7 +182,7 @@ vector<double> MPC::mpc_solve(Eigen::VectorXd state,Eigen::VectorXd coeff){
   options += "Sparse  true        reverse\n";
   // NOTE: Currently the solver has a maximum time limit of 0.5 seconds.
   // Change this as you see fit.
-  options += "Numeric max_cpu_time          0.5\n";
+  options += "Numeric max_cpu_time          2\n";
 
     // std::string options;
 
@@ -214,8 +231,8 @@ int calc_lookahead_pt(std::vector<double> cx,std::vector<double> cy,state veh){
     return indx;
 }
 
-void get_14points(int indx,Eigen::VectorXd &x_14pts,Eigen::VectorXd &y_14pts,std::vector<double>cx,std::vector<double>cy){
-    for(int i=0;i<7;i++){
+void get_14points(int indx,Eigen::VectorXd &x_14pts,Eigen::VectorXd &y_14pts,std::vector<double>cx,std::vector<double>cy,int fit_numberof_pts){
+    for(int i=0;i<fit_numberof_pts;i++){
         x_14pts[i] = cx[i+indx];
         y_14pts[i] = cy[i+indx];
     }
@@ -255,7 +272,7 @@ int main (){
     // std::cin >> _x;
     // std::cout << "enter y: " << endl;
     // std::cin >> _y; 
-    state veh_ (0,0,0,0);
+    state veh_ (0,3,0,0);
     // set speed
     std::vector<state> veh_state;
     veh_state.push_back(veh_);
@@ -266,20 +283,22 @@ int main (){
     //std::cout << "before while ";
 
     MPC controller;
-    Eigen::VectorXd x_14pts(7);
-    Eigen::VectorXd y_14pts(7);
+    int fit_numberof_pts = 14;
+    Eigen::VectorXd x_14pts(fit_numberof_pts);
+    Eigen::VectorXd y_14pts(fit_numberof_pts);
     int last_target_idx = 0;
     while (time < max_time ){
         int clst_indx = calc_lookahead_pt(cx, cy,veh_); // find the closest point
-        get_14points(clst_indx,x_14pts,y_14pts,cx,cy); //find the closest 14 points
+        get_14points(clst_indx,x_14pts,y_14pts,cx,cy,fit_numberof_pts); //find the closest 14 points
+        std::vector<double> x14pts(x_14pts.size(),0),y14pts(x_14pts.size(),0);
+        for(int i=0;i<x_14pts.size();i++){
+            x14pts[i] = x_14pts[i];
+            y14pts[i] = y_14pts[i];;
+
+        }
         transform_to_local(veh_,x_14pts,y_14pts);
         //std::cout<<"14 points";
 
-        // for(int i=0;i<x_14pts.size();i++){
-        //     std::cout<<x_14pts[i]<<std::endl;
-        //     std::cout<<y_14pts[i]<<std::endl;
-
-        // }
         Eigen::VectorXd coeff = polyfit(x_14pts,y_14pts,3);
         // std::cout<<"start coeff";
         // for(int i=0;i<coeff.size();i++){
@@ -288,6 +307,9 @@ int main (){
         // std::cout<<"start coeff";
 
         double cte = coeff[0];
+        std::cout<<"CTE"<<cte;
+        int rand;
+        // std::cin>> rand;
         double we = -atan(coeff[1]);
         std::cout<<we;
         Eigen::VectorXd vehstate(6);
@@ -309,6 +331,7 @@ int main (){
 			// Plot line from given x and y data. Color is selected automatically.            
 			plt::named_plot("Car",x,y,"*k");
             plt::named_plot("Track",cx,cy,"-r");   
+            plt::named_plot("poly_points",x14pts,y14pts,"-b");
             plt::legend();
             // plt::xlim(-1,60);
             // plt::plot(cx,cdd,"-b");
