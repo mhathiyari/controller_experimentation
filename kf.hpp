@@ -2,6 +2,16 @@
 #include "matplotlibcpp.h"
 #include <cmath>
 #include<random>
+#include<time.h>
+#include<vector>
+#include<eigen3/Eigen/Dense>
+
+using namespace std;
+namespace plt = matplotlibcpp;
+//namespace Eigen = eig;
+
+default_random_engine generator;
+normal_distribution<double> distribution(0.0,1.0);
 struct Point{
   double x;
   double y;
