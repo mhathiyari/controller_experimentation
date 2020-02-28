@@ -44,3 +44,39 @@ struct Point{
    y = A.y;
   }
 };
+
+class Dog {
+    public:
+    Point pos;
+    float procces_var;
+    float sensor_var;
+    float velocity;
+    float position_var = 200;
+    Point getactual(){
+        return pos;
+    }
+    Point getSensor(){
+        Point result;
+        result.x = pos.x +sensor_var*distribution(generator);
+        result.y = pos.y+sensor_var*distribution(generator);
+        return result;
+    }
+    void move(float dt){
+        float dx = velocity+procces_var*distribution(generator);
+        pos.x += dx*dt; 
+        float dy = velocity+procces_var*distribution(generator);
+        pos.y += dy*dt; 
+    }
+    Point moveAndSense (float dt){
+        if(dt !=0 )
+            move(dt);
+        return getSensor();
+    }
+    Dog(){
+        pos.x = 0;
+        pos.y = 0;
+        procces_var = 0.50;
+        sensor_var = 5.0;
+        velocity = 1;
+    }
+};
